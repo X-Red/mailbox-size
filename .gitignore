@@ -3,7 +3,7 @@
 .*.swp
 *.log
 config_local.py
-
+test.py
 
 # Environments
 .env
@@ -13,3 +13,4 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+test/
