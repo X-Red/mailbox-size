@@ -37,6 +37,6 @@ TABLE_DESCRIPTION = (
 # Load the local configuration
 try:
 	from config_local import *
-except e:
-	print(e)
+except:
+	print("config_local.py is not imported. Please check if the file exists.")
 
