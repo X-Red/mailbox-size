@@ -13,7 +13,7 @@ def get_file_size_in_megabytes(file_path):
       return os.path.getsize(file_path)*(10**-6)
    except FileNotFoundError:
       print("No file found in path: ", file_path)
-      return 0 #Return 0 if file specified does not exist or path given is mistaken 
+      return 0 #Return 0 if file specified does not exist or path given is mistaken
 
 def get_total_size_in_megabytes(files):
     """ Accepts a sequence of file paths and returns the total size of these files in megabytes. """
@@ -25,10 +25,10 @@ def get_directory_size_in_megabytes(directory_path):
     return get_total_size_in_megabytes(files)
 
 def create_connection():
-   """ Creates a database connection with the details specified in config.py file 
-   
-   IMPORTANT Note: The connection returned from this function should be closed in 
-   the outer function when done being used. For example, if you make a function 
+   """ Creates a database connection with the details specified in config.py file
+
+   IMPORTANT Note: The connection returned from this function should be closed in
+   the outer function when done being used. For example, if you make a function
    call such as cnx = create_connection(), you should not forget calling cnx.close()
    when you are done with the connection.
    """
@@ -50,7 +50,7 @@ def create_table():
 
    cnx = create_connection()
    cursor = cnx.cursor()
-   
+
    print(TABLE_DESCRIPTION)
    try:
       print("Creating table...")
@@ -94,19 +94,19 @@ def table_exists(table_name):
    else:
       return False
 
-   
-     
+
+
 def insert_usage(user_size):
    """ Inserts a new row to the table specified in USAGE_TABLE dictionary in config.py.
 
-   It accepts a tuple of form (username, size used). 
-   Note: This function is to create new rows for cases when user specified in username not yet having a record in usage table. 
+   It accepts a tuple of form (username, size used).
+   Note: This function is to create new rows for cases when user specified in username not yet having a record in usage table.
    For updating usage sizes for users with existing records, see update_usage() function.
-   """ 
+   """
    cnx = create_connection()
    cursor = cnx.cursor()
 
-   insert_query = ( 
+   insert_query = (
       "INSERT INTO " + USAGE_TABLE['name'] + " "
       "(" + USAGE_TABLE['relational_column'] + ", " + USAGE_TABLE['size_column'] + ")"
       " VALUES ('" + user_size[0] + "', " + str(user_size[1]) + ")"
@@ -142,7 +142,7 @@ def record_exists(user):
       else:
          print(e)
       return
-   
+
    rows = cursor.fetchall()
    cnx.close()
    cursor.close()
@@ -152,13 +152,13 @@ def record_exists(user):
    else:
       return False
 
-def update_usage(user_usage):
+def update_usage(user_size):
    """ Updates the usage table with the values specified in user_size of form (username, size used)"""
 
    cnx = create_connection()
    cursor = cnx.cursor()
 
-   update_query = ( 
+   update_query = (
       "UPDATE " + USAGE_TABLE['name'] + " "
       " SET " + USAGE_TABLE['size_column'] + "=" + str(user_size[1]) + " "
       " WHERE " + USAGE_TABLE['relational_column'] + "='" + user_size[0] + "'"
@@ -171,27 +171,27 @@ def update_usage(user_usage):
       cnx.close()
       print(e)
       return
-   
+
    cursor.close()
    cnx.close()
 
 
 def select_user_paths(query=SELECT_QUERY):
-   """ Selects and returns a list of tuples of form (username, maildir path) for currently active users. 
-   
-   The default value for the query is the SELECT_QUERY defined in config.py file. This default might be 
+   """ Selects and returns a list of tuples of form (username, maildir path) for currently active users.
+
+   The default value for the query is the SELECT_QUERY defined in config.py file. This default might be
    changed or other queries can be passed as an argument. However, if this is done, please make sure that
    the result of the query passed returns exactly 2 columns with information username/userid etc. in first
    column and path to usage directory in the other column.
    """
-   
+
    if query[:6] != 'SELECT':
       print("The query specified is not a SELECT query. Aborting!")
       return
 
    cnx = create_connection()
    cursor = cnx.cursor()
-   
+
    try:
       cursor.execute(query)
    except mysql.connector.errors.ProgrammingError as e:
@@ -207,12 +207,12 @@ def select_user_paths(query=SELECT_QUERY):
    return query_result
 
 def update_usage_sizes():
-   """ Pseudo-main function that finds the sizes for all active users and updates/creates them accordingly in the database. 
-   
-   Note: This function could've been defined as the main function. But I am leaving the main for the timing, testing and 
+   """ Pseudo-main function that finds the sizes for all active users and updates/creates them accordingly in the database.
+
+   Note: This function could've been defined as the main function. But I am leaving the main for the timing, testing and
    other purposes.
-   Note: If no table with the specified table name in USAGE_TABLE dictionary is found, the script will 
-   create one using the information outlined in TABLE_DESCRIPTION variable. Also, The default values 
+   Note: If no table with the specified table name in USAGE_TABLE dictionary is found, the script will
+   create one using the information outlined in TABLE_DESCRIPTION variable. Also, The default values
    specified in USAGE_TABLE dictionary in config.py file can be changed/customized.
    """
 
@@ -224,7 +224,7 @@ def update_usage_sizes():
    for x in user_paths:
       curr_dir = os.path.join(ROOT_DIR, x[1])
       user_sizes.append((x[0], round(get_directory_size_in_megabytes(curr_dir), 8)))
-   
+
    for tup in user_sizes:
       if not record_exists(tup[0]):
          insert_usage(tup)
@@ -233,10 +233,10 @@ def update_usage_sizes():
 
 def main():
    update_usage_sizes()
-   
+
 # Log function
 def write_log(text):
-	# Escribe el archivo log en la carpeta SFTP_LOG
+	# Open and write the log file
 	log = open(XRED_LOG + datetime.datetime.now().strftime("%Y-%m-%d") + "_mailbox-size.log","a")
 	line = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + " " + text + "\n"
 	log.write(line)
