@@ -103,7 +103,6 @@ def insert_usage(user_size, USAGE_TABLE=USAGE_TABLE):
    Note: This function is to create new rows for cases when user specified in username not yet having a record in usage table.
    For updating usage sizes for users with existing records, see update_usage() function.
    """
-
    cnx = create_connection()
    cursor = cnx.cursor()
 
