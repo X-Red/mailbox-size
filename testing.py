@@ -55,9 +55,20 @@ def init():
             account_dir = os.path.join(ROOT_DIR, path[1])
             os.mkdir(account_dir)
             
+            
+            test_paths = ['/test_one', '/test_two']
+            for test_path in test_paths:
+                test_dir = account_dir + test_path
+                os.mkdir(test_dir)
+                p = test_dir + '/bin_file'
+                rand = random.randint(1, 10)
+                size = 1024*1024*rand
+                with open(p, 'wb') as fout:
+                    fout.write(os.urandom(size))
+            
             rand = random.randint(1, 10)
             size = 1024*1024*rand
-            f = str(account_dir) + 'bin_file'
+            f = account_dir + 'bin_file'
             with open(f, 'wb') as fout:
                 fout.write(os.urandom(size))
             USAGE_SIZES[path[0]] = size
@@ -89,13 +100,12 @@ def test_database_records():
     PASSED = True
 
     try:
-        update_usage_sizes(USAGE_TABLE=TEST_TABLE)
+        update_usage_sizes(USAGE_TABLE=TEST_TABLE, ROOT_DIR=ROOT_DIR)
 
         user_paths = select_user_paths()
-        user_sizes = {}
         for x in user_paths:
             curr_dir = os.path.join(ROOT_DIR, x[1])
-            user_sizes[str(x[0])] = round(get_directory_size_in_megabytes(curr_dir), 8)
+            USAGE_SIZES[str(x[0])] = round(get_directory_size_in_megabytes(curr_dir), 6)
 
         cnx = create_connection()
         cursor = cnx.cursor()
@@ -113,7 +123,7 @@ def test_database_records():
         cnx.close()
 
         for result in query_result:
-            if USAGE_SIZES[result[0]] != result[1]*(1024*1024):
+            if USAGE_SIZES[result[0]] != result[1]:
                 print("Failed!")
                 PASSED = False
                 break
@@ -140,14 +150,18 @@ def test_size_function():
         user_sizes = {}
         for x in user_paths:
             curr_dir = os.path.join(ROOT_DIR, x[1])
-            user_sizes[str(x[0])] = round(get_directory_size_in_megabytes(curr_dir), 8)
+            user_sizes[str(x[0])] = round(get_directory_size_in_megabytes(curr_dir), 6)
 
         for path in user_paths:
             command_path = f'./test/{path[1]}'
-            out = subprocess.run(["du", "--max-depth=1" ,command_path], capture_output=True)
+            out = subprocess.run(["du", "-sb", "-s" , command_path], capture_output=True)
             sys_size = out.stdout.decode('ascii')
             size = sys_size.split(".")[0]
-            if (int(size)-4)/1024 != user_sizes[path[0]]:
+            size = float(size)
+            size = (size-4)/(1024*1024)
+            size = round(size, 6)
+            
+            if size != user_sizes[path[0]]:
                 print("Failed!")
                 PASSED = False
                 break

@@ -1,7 +1,7 @@
 # X-Red.Com - Configuration file
 SERVER_NAME = "servidor.x-red.com"
 
-VIRTUAL_ROOT = "/virtual/vweb/" # Must unclude the / at the end
+VIRTUAL_ROOT = "/virtual/vweb/" # Must include the / at the end
 XRED_LOG  = "/var/log/x-red.com/"
 MYSQL_HOST = "127.0.0.1"
 MYSQL_USER = "root"

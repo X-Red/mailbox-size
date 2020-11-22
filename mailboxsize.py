@@ -3,26 +3,18 @@
 import mysql.connector
 from mysql.connector import errorcode
 import os
+import subprocess
 
 # Import local Configuration
 from config import *
 
-def get_file_size_in_megabytes(file_path):
-   """ Finds the size of a file in the given file_path in megabytes. """
-   try:
-      return os.path.getsize(file_path)/(1024*1024)
-   except FileNotFoundError:
-      print("No file found in path: ", file_path)
-      return 0 #Return 0 if file specified does not exist or path given is mistaken
-
-def get_total_size_in_megabytes(files):
-    """ Accepts a sequence of file paths and returns the total size of these files in megabytes. """
-    return sum([get_file_size_in_megabytes(x) for x in files])
-
 def get_directory_size_in_megabytes(directory_path):
-    """ This function returns the total size of files in a given directory. """
-    files = [directory_path + x for x in os.listdir(directory_path)]
-    return get_total_size_in_megabytes(files)
+   """ This function returns the total size of files in a given directory. """
+   out = subprocess.run(["du", "-sb", "-s" , directory_path], capture_output=True)
+   sys_size = out.stdout.decode('ascii')
+   size = sys_size.split("/")[0]
+   size = float(size)
+   return (size-4)/(1024*1024)
 
 def create_connection():
    """ Creates a database connection with the details specified in config.py file
@@ -207,7 +199,7 @@ def select_user_paths(query=SELECT_QUERY):
 
    return query_result
 
-def update_usage_sizes(USAGE_TABLE=USAGE_TABLE):
+def update_usage_sizes(USAGE_TABLE=USAGE_TABLE, ROOT_DIR=ROOT_DIR):
    """ Pseudo-main function that finds the sizes for all active users and updates/creates them accordingly in the database.
 
    Note: This function could've been defined as the main function. But I am leaving the main for the timing, testing and
@@ -224,7 +216,7 @@ def update_usage_sizes(USAGE_TABLE=USAGE_TABLE):
    user_sizes = []
    for x in user_paths:
       curr_dir = os.path.join(ROOT_DIR, x[1])
-      user_sizes.append((x[0], round(get_directory_size_in_megabytes(curr_dir), 8)))
+      user_sizes.append((x[0], round(get_directory_size_in_megabytes(curr_dir), 6)))
 
    for tup in user_sizes:
       insert_usage(tup, USAGE_TABLE=USAGE_TABLE)
