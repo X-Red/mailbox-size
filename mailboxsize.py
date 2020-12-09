@@ -3,26 +3,18 @@
 import mysql.connector
 from mysql.connector import errorcode
 import os
+import subprocess
 
 # Import local Configuration
 from config import *
 
-def get_file_size_in_megabytes(file_path):
-   """ Finds the size of a file in the given file_path in megabytes. """
-   try:
-      return os.path.getsize(file_path)*(10**-6)
-   except FileNotFoundError:
-      print("No file found in path: ", file_path)
-      return 0 #Return 0 if file specified does not exist or path given is mistaken
-
-def get_total_size_in_megabytes(files):
-    """ Accepts a sequence of file paths and returns the total size of these files in megabytes. """
-    return sum([get_file_size_in_megabytes(x) for x in files])
-
 def get_directory_size_in_megabytes(directory_path):
-    """ This function returns the total size of files in a given directory. """
-    files = [directory_path + x for x in os.listdir(directory_path)]
-    return get_total_size_in_megabytes(files)
+   """ This function returns the total size of files in a given directory. """
+   out = subprocess.run(["du", "-sb", "-s" , directory_path], capture_output=True)
+   sys_size = out.stdout.decode('ascii')
+   size = sys_size.split("/")[0]
+   size = float(size)
+   return (size-4)/(1024*1024)
 
 def create_connection():
    """ Creates a database connection with the details specified in config.py file
@@ -45,13 +37,13 @@ def create_connection():
          print(err)
          return
 
-def create_table():
+def create_table(TABLE_DESCRIPTION=TABLE_DESCRIPTION):
    """ Creates a table with the given specifications in config.py file """
 
    cnx = create_connection()
    cursor = cnx.cursor()
 
-   print(TABLE_DESCRIPTION)
+   #print(TABLE_DESCRIPTION)
    try:
       print("Creating table...")
       cursor.execute(TABLE_DESCRIPTION)
@@ -96,7 +88,7 @@ def table_exists(table_name):
 
 
 
-def insert_usage(user_size):
+def insert_usage(user_size, USAGE_TABLE=USAGE_TABLE):
    """ Inserts a new row to the table specified in USAGE_TABLE dictionary in config.py.
 
    It accepts a tuple of form (username, size used).
@@ -108,8 +100,8 @@ def insert_usage(user_size):
 
    insert_query = (
       "INSERT INTO " + USAGE_TABLE['name'] + " "
-      "(" + USAGE_TABLE['relational_column'] + ", " + USAGE_TABLE['size_column'] + ")"
-      " VALUES ('" + user_size[0] + "', " + str(user_size[1]) + ")"
+      "(" + USAGE_TABLE['relational_column'] + ", " + USAGE_TABLE['size_column'] + ", " + USAGE_TABLE['timestamp_column'] + ")"
+      " VALUES ('" + user_size[0] + "', " + str(user_size[1]) + ", NOW()" + ")"
    )
 
    try:
@@ -125,8 +117,9 @@ def insert_usage(user_size):
    cursor.close()
    cnx.close()
 
-def record_exists(user):
+def record_exists(user, USAGE_TABLE=USAGE_TABLE):
    """ Checks if a record exists for the user specified in the usage table. """
+   
    cnx = create_connection()
    cursor = cnx.cursor()
 
@@ -152,7 +145,7 @@ def record_exists(user):
    else:
       return False
 
-def update_usage(user_size):
+def update_usage(user_size, USAGE_TABLE=USAGE_TABLE):
    """ Updates the usage table with the values specified in user_size of form (username, size used)"""
 
    cnx = create_connection()
@@ -206,13 +199,13 @@ def select_user_paths(query=SELECT_QUERY):
 
    return query_result
 
-def update_usage_sizes():
+def update_usage_sizes(USAGE_TABLE=USAGE_TABLE, ROOT_DIR=ROOT_DIR):
    """ Pseudo-main function that finds the sizes for all active users and updates/creates them accordingly in the database.
 
    Note: This function could've been defined as the main function. But I am leaving the main for the timing, testing and
    other purposes.
    Note: If no table with the specified table name in USAGE_TABLE dictionary is found, the script will
-   create one using the information outlined in TABLE_DESCRIPTION variable. Also, The default values
+   create one using the information outlined in TABLE_DESCRIPTION variable. Also, the default values
    specified in USAGE_TABLE dictionary in config.py file can be changed/customized.
    """
 
@@ -223,13 +216,16 @@ def update_usage_sizes():
    user_sizes = []
    for x in user_paths:
       curr_dir = os.path.join(ROOT_DIR, x[1])
-      user_sizes.append((x[0], round(get_directory_size_in_megabytes(curr_dir), 8)))
+      user_sizes.append((x[0], round(get_directory_size_in_megabytes(curr_dir), 6)))
 
    for tup in user_sizes:
-      if not record_exists(tup[0]):
-         insert_usage(tup)
-      else:
-         update_usage(tup)
+      insert_usage(tup, USAGE_TABLE=USAGE_TABLE)
+      
+      #Un-comment these lines and delete the one above if you don't want duplicate rows. 
+      #if not record_exists(tup[0], USAGE_TABLE=USAGE_TABLE):
+      #   insert_usage(tup, USAGE_TABLE=USAGE_TABLE)
+      #else:
+      #   update_usage(tup, USAGE_TABLE=USAGE_TABLE)
 
 def main():
    update_usage_sizes()
